@@ -14,6 +14,8 @@
 MODULE_DESCRIPTION("Netfilter Final");
 MODULE_AUTHOR("Bryan Diaz");
 
+#define IP_POS(ip, i) (ip >> ((8*(3-i))) & 0xFF)
+
 enum mode {
 	NONE = 0,
 	ADD = 1,
@@ -21,17 +23,7 @@ enum mode {
 	VIEW = 3
 };
 
-struct net_ctl{
-	enum mode mmode;
-	struct rule mrule;
-};
-
-struct rule_node{
-	struct rule mrule;
-	struct list_head list;
-};
-
-struct rule{
+struct net_rule{
 	int in_out;		// 1=in, 2=out
 	uint32_t startIP;
 	uint32_t startMask;
@@ -39,21 +31,31 @@ struct rule{
 	uint32_t endMask;
 };
 
+struct net_ctl{
+	enum mode mmode;
+	struct net_rule mrule;
+};
+
+struct rule_node{
+	struct net_rule mrule;
+	struct list_head list;
+};
+
 struct list_head In_list, Out_list;
 static int Device_open;
 static char* buffer;
 
-typedef unsigned int default_filter(void *priv, struct sk_buff *skb,
+static unsigned int net_default_filter(void *priv, struct sk_buff *skb,
     const struct nf_hook_state *state, struct list_head* rule_list_head){
 	struct list_head* hlist;
 	struct rule_node* node;
-	struct rule* hrule;
-	struct iphdr* hiph;
+	struct net_rule* hrule;
+	//struct iphdr* hiph;
 	
 	uint32_t startIP;
 	uint32_t endIP;
 
-	if(!skb || rule_list_head->next == rule_list_head);
+	if(!skb || rule_list_head->next == rule_list_head)
 		return NF_ACCEPT;
 
 	iph = (struct iphdr *)skb_network_header(skb);
@@ -65,7 +67,7 @@ typedef unsigned int default_filter(void *priv, struct sk_buff *skb,
 	
 	hlist = rule_list_head;
 	list_for_each_entry(node, hlist, list){
-		hrule = &node->rule;
+		hrule = &node->mrule;
 
 		if(!(hrule->startIP == 0) && !(((startIP ^ hrule->startIP) & hrule->startMask)== 0))
 			continue;
@@ -86,17 +88,17 @@ typedef unsigned int default_filter(void *priv, struct sk_buff *skb,
 
 // INbound filter
 static unsigned int in_filter(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){
-	return default_filter(priv, skb, state, &In_list);
+	return net_default_filter(priv, skb, state, &In_list);
 }
 
 // OUTbound filter
 static unsigned int out_filter(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
-	return default_filter(priv, skb, state, &Out_list);
+	return net_default_filter(priv, skb, state, &Out_list);
 }
 
 // Open operation of device file
-static int dev_open(struct inode *inode, struct file *file){
+static int net_dev_open(struct inode *inode, struct file *file){
 	if(Device_open)
 		return -EBUSY;
 
@@ -111,14 +113,14 @@ static int dev_open(struct inode *inode, struct file *file){
 }
 
 // Release operation of device file
-static int dev_release(struct inode *inode, struct file *file){
+static int net_dev_release(struct inode *inode, struct file *file){
 	module_put(THIS_MODULE);
 	Device_open--;
 	return 0;
 }
 
 // User-space view operation
-static size_t dev_read(struct file *file, char *buffer, size_t length, loff_t *offset){
+static size_t net_dev_read(struct file *file, char *buffer, size_t length, loff_t *offset){
 	int byte_read = 0;
 	static struct list_head* inlp = &In_list;
 	static struct list_head* outlp = &Out_list;
@@ -147,7 +149,7 @@ static size_t dev_read(struct file *file, char *buffer, size_t length, loff_t *o
 	}
 
 	// Write to userspace using buffer
-	while(length && (byte_read < sizeof(struct rule))) {
+	while(length && (byte_read < sizeof(struct net_rule))) {
 		put_user(readptr[byte_read], &(buffer[byte_read]));
 		byte_read++;
 		length--;
@@ -156,7 +158,7 @@ static size_t dev_read(struct file *file, char *buffer, size_t length, loff_t *o
 }
 
 // Add rule to either inbound or outbound list
-static void add_rule(struct rule* mrule)
+static void net_add_rule(struct net_rule* mrule)
 {
 	struct rule_node* nodep;
 	nodep = (struct rule_node *)kmalloc(sizeof(struct rule_node), GFP_KERNEL);
@@ -177,13 +179,43 @@ static void add_rule(struct rule* mrule)
 	}
 	printk(KERN_INFO
 	       "src %d.%d.%d.%d   dst %d.%d.%d.%d\n",
-	       IP_POS(rule->s_ip, 3), IP_POS(rule->s_ip, 2),
-	       IP_POS(rule->s_ip, 1), IP_POS(rule->s_ip, 0),
-	       IP_POS(rule->d_ip, 3), IP_POS(rule->d_ip, 2),
-	       IP_POS(rule->d_ip, 1), IP_POS(rule->d_ip, 0));
+	       IP_POS(mrule->startIP, 3), IP_POS(mrule->startIP, 2),
+	       IP_POS(mrule->startIP, 1), IP_POS(mrule->startIP, 0),
+	       IP_POS(mrule->endIP, 3), IP_POS(mrule->endIP, 2),
+	       IP_POS(mrule->endIP, 1), IP_POS(mrule->endIP, 0));
 }
 
-static size_t dev_write(struct file *file, const char *dev_buffer, size_t length,
+static void net_del_rule(struct net_rule *rule){
+	struct rule_node *node;
+	struct list_head *lheadp;
+	struct list_head *lp;
+
+	if(rule->in_out == 1)
+		lheadp = &In_list;
+	else
+		lheadp = &Out_list;
+
+	for(lp = lheadp; lp->next != lheadp; lp = lp->next) {
+		node = list_entry(lp->next, struct rule_node, list);
+		if(node->mrule.in_out == rule->in_out &&
+		   node->mrule.startIP == rule->startIP &&
+		   node->mrule.startMask == rule->startMask &&
+		   node->mrule.endIP == rule->endIP &&
+		   node->mrule.endMask == rule->endMask {
+			list_del(lp->next);
+			kfree(node);
+			printk(KERN_INFO "Netfilter: Remove rule "
+			       "src %d.%d.%d.%d  dst %d.%d.%d.%d\n",
+			       IP_POS(mrule->startIP, 3), IP_POS(mrule->startIP, 2),
+			       IP_POS(mrule->startIP, 1), IP_POS(mrule->startIP, 0),
+			       IP_POS(mrule->endIP, 3), IP_POS(mrule->endIP, 2),
+			       IP_POS(mrule->endIP, 1), IP_POS(mrule->endIP, 0);
+			break;
+		}
+	}
+}
+
+static size_t net_dev_write(struct file *file, const char *dev_buffer, size_t length,
 	     loff_t *offset){
 	struct net_ctl *ctlp;
 	int byte_write = 0;
@@ -200,13 +232,13 @@ static size_t dev_write(struct file *file, const char *dev_buffer, size_t length
 		length--;
 	}
 
-	ctlp = (struct mfw_ctl *)buffer;
+	ctlp = (struct net_ctl *)buffer;
 	switch(ctlp->mode) {
 	case ADD:
-		rule_add(&ctlp->mrule);
+		net_add_rule(&ctlp->mrule);
 		break;
 	case REMOVE:
-		rule_del(&ctlp->mrule);
+		net_del_rule(&ctlp->mrule);
 		break;
 	default:
 		printk(KERN_ALERT
@@ -236,10 +268,10 @@ struct nf_hook_ops net_out_hook_ops = {
 
 // File operation config
 struct file_operations net_dev_fops = {
-	.read = dev_read,
-	.write = dev_write,
-	.open = dev_open,
-	.release = dev_release
+	.read = net_dev_read,
+	.write = net_dev_write,
+	.open = net_dev_open,
+	.release = net_dev_release
 };
 
 // Initialize Netfilter module
@@ -256,7 +288,7 @@ static int __init mod_init(void)
 	INIT_LIST_HEAD(&In_list);
 	INIT_LIST_HEAD(&Out_list);
 
-	ret = register_chrdev(100, "netfilter_file", &dev_fops);
+	ret = register_chrdev(100, "netfilter_file", &net_dev_fops);
 	if(ret < 0) {
 		printk(KERN_ALERT
 		       "Netfilter: Fails to start due to device register\n");
@@ -269,8 +301,8 @@ static int __init mod_init(void)
 	       "To communicate to the device, use: mknod %s c %d 0\n",
 	       "netfilter_file", 100);
 
-	nf_register_hook(&in_hook_ops);
-	nf_register_hook(&out_hook_ops);
+	nf_register_net_hook(&net_in_hook_ops);
+	nf_register_net_hook(&net_out_hook_ops);
 	return 0;
 }
 
@@ -297,11 +329,11 @@ static void __exit mod_cleanup(void)
 	}
 
 	unregister_chrdev(100, "netfilter_file");
-	printk(KERN_INFO "MiniFirewall: Device %s is unregistered\n",
-	       DEVICE_INTF_NAME);
+	printk(KERN_INFO "Netfilter: Device %s is unregistered\n",
+	       "netfilter_file");
 
-	nf_unregister_hook(&in_hook_ops);
-	nf_unregister_hook(&out_hook_ops);
+	nf_unregister_net_hook(&net_in_hook_ops);
+	nf_unregister_net_hook(&net_out_hook_ops);
 }
 module_init(mod_init);
 module_exit(mod_cleanup);

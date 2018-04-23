@@ -15,17 +15,18 @@ enum mode {
 	VIEW = 3
 };
 
-struct net_ctl{
-	enum mode mmode;
-	struct rule mrule;
-};
 
-struct rule{
+struct net_rule{
 	int in_out;		// 1=in, 2=out
 	uint32_t startIP;
 	uint32_t startMask;
 	uint32_t endIP;
 	uint32_t endMask;
+};
+
+struct net_ctl{
+	enum mode mmode;
+	struct net_rule mrule;
 };
 
 // Prints functions and params
@@ -71,7 +72,7 @@ static void view_rules(void){
 	char* buffer;
 	int byte_count;
 	struct in_addr addr;
-	struct rule* rule;
+	struct net_rule* rule;
 
 	fp = fopen("netfilter_file", "r");
 	if(fp == NULL) {
@@ -90,8 +91,8 @@ static void view_rules(void){
 	printf("I/O  "
 	       "S_Addr           S_Mask           D_Addr           "
 	       "D_Mask\n");
-	while((byte_count = fread(buffer, 1, sizeof(struct rule), fp)) > 0) {
-		rule = (struct rule *)buffer;
+	while((byte_count = fread(buffer, 1, sizeof(struct net_rule), fp)) > 0) {
+		rule = (struct net_rule *)buffer;
 		printf("%-3s  ", rule->in_out ? "In" : "Out");
 		addr.s_addr = rule->startIP;
 		printf("%-15s  ", inet_ntoa(addr));
