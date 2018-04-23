@@ -1,0 +1,5 @@
+cmake_minimum_required (VERSION 2.6)
+project(netfilter)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c99 -g")
+add_executable(netfilter netfilter.c)
+target_link_libraries(netfilter pthread)
