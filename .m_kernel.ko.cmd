@@ -1,0 +1,1 @@
+cmd_/home/bryan/Downloads/NetfilterFinalProject/m_kernel.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /home/bryan/Downloads/NetfilterFinalProject/m_kernel.ko /home/bryan/Downloads/NetfilterFinalProject/m_kernel.o /home/bryan/Downloads/NetfilterFinalProject/m_kernel.mod.o ;  true
