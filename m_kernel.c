@@ -198,11 +198,11 @@ static void net_del_rule(struct net_rule* mrule){
 
 	for(lp = lheadp; lp->next != lheadp; lp = lp->next) {
 		node = list_entry(lp->next, struct rule_node, list);
-		if(node->mrule.in_out == rule->in_out &&
-		   node->mrule.startIP == rule->startIP &&
-		   node->mrule.startMask == rule->startMask &&
-		   node->mrule.endIP == rule->endIP &&
-		   node->mrule.endMask == rule->endMask) {
+		if(node->mrule.in_out == mrule->in_out &&
+		   node->mrule.startIP == mrule->startIP &&
+		   node->mrule.startMask == mrule->startMask &&
+		   node->mrule.endIP == mrule->endIP &&
+		   node->mrule.endMask == mrule->endMask) {
 			list_del(lp->next);
 			kfree(node);
 			printk(KERN_INFO "Netfilter: Remove rule "
