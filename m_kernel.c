@@ -44,7 +44,7 @@ struct rule_node{
 struct list_head In_list, Out_list;
 static int Device_open;
 static char* buffer;
-struct net* mnet, mnet2;
+struct net* mnet;
 
 static unsigned int net_default_filter(void *priv, struct sk_buff *skb,
     const struct nf_hook_state *state, struct list_head* rule_list_head){
@@ -191,7 +191,7 @@ static void net_del_rule(struct net_rule* mrule){
 	struct list_head *lheadp;
 	struct list_head *lp;
 
-	if(rule->in_out == 1)
+	if(mrule->in_out == 1)
 		lheadp = &In_list;
 	else
 		lheadp = &Out_list;
@@ -303,7 +303,7 @@ static int __init net_mod_init(void)
 	       "netfilter_file", 100);
 
 	nf_register_net_hook(mnet, &net_in_hook_ops);
-	nf_register_net_hook(mnet2, &net_out_hook_ops);
+	nf_register_net_hook(mnet, &net_out_hook_ops);
 	return 0;
 }
 
@@ -334,7 +334,7 @@ static void __exit net_mod_cleanup(void)
 	       "netfilter_file");
 	
 	nf_unregister_net_hook(mnet, &net_in_hook_ops);
-	nf_unregister_net_hook(mnet2, &net_out_hook_ops);
+	nf_unregister_net_hook(mnet, &net_out_hook_ops);
 }
 module_init(net_mod_init);
 module_exit(net_mod_cleanup);
