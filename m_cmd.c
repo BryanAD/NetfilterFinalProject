@@ -179,31 +179,31 @@ static int parse_arguments(int argc, char **argv, struct net_ctl *ret_ctl){
 				printf("Invalid source ip address\n");
 				return -1;
 			}
-			ctl.mrule.StartIP = addr.s_addr;
+			ctl.mrule.startIP = addr.s_addr;
 			break;
 		case 'm':	// Starting Subnet Mask
 			if(inet_aton(optarg, &addr) == 0) {
 				printf("Invalid source subnet mask\n");
 				return -1;
 			}
-			ctl.mrule.StartMask = addr.s_addr;
+			ctl.mrule.startMask = addr.s_addr;
 			break;
 		case 'd':	// End IP Address
 			if(inet_aton(optarg, &addr) == 0) {
 				printf("Invalid destination ip address\n");
 				return -1;
 			}
-			ctl.mrule.EndIP = addr.s_addr;
+			ctl.mrule.endIP = addr.s_addr;
 			break;
 		case 'n':	// End Subnet Mask
 			if(inet_aton(optarg, &addr) == 0) {
 				printf("Invalid destination subnet mask\n");
 				return -1;
 			}
-			ctl.mrule.EndMask = addr.s_addr;
+			ctl.mrule.endMask = addr.s_addr;
 			break;
 		case 'a':	// Add rule
-			if(ctl.mmode != MFW_NONE) {
+			if(ctl.mmode != NONE) {
 				printf("Only one mode can be selected.\n");
 				return -1;
 			}
