@@ -44,6 +44,7 @@ struct rule_node{
 struct list_head In_list, Out_list;
 static int Device_open;
 static char* buffer;
+struct net* mnet, mnet2;
 
 static unsigned int net_default_filter(void *priv, struct sk_buff *skb,
     const struct nf_hook_state *state, struct list_head* rule_list_head){
@@ -185,7 +186,7 @@ static void net_add_rule(struct net_rule* mrule)
 	       IP_POS(mrule->endIP, 1), IP_POS(mrule->endIP, 0));
 }
 
-static void net_del_rule(struct net_rule *rule){
+static void net_del_rule(struct net_rule* mrule){
 	struct rule_node *node;
 	struct list_head *lheadp;
 	struct list_head *lp;
@@ -209,7 +210,7 @@ static void net_del_rule(struct net_rule *rule){
 			       IP_POS(mrule->startIP, 3), IP_POS(mrule->startIP, 2),
 			       IP_POS(mrule->startIP, 1), IP_POS(mrule->startIP, 0),
 			       IP_POS(mrule->endIP, 3), IP_POS(mrule->endIP, 2),
-			       IP_POS(mrule->endIP, 1), IP_POS(mrule->endIP, 0);
+			       IP_POS(mrule->endIP, 1), IP_POS(mrule->endIP, 0));
 			break;
 		}
 	}
@@ -301,10 +302,8 @@ static int __init net_mod_init(void)
 	       "To communicate to the device, use: mknod %s c %d 0\n",
 	       "netfilter_file", 100);
 
-	struct net* mnet;
-
 	nf_register_net_hook(mnet, &net_in_hook_ops);
-	nf_register_net_hook(mnet, &net_out_hook_ops);
+	nf_register_net_hook(mnet2, &net_out_hook_ops);
 	return 0;
 }
 
@@ -334,10 +333,8 @@ static void __exit net_mod_cleanup(void)
 	printk(KERN_INFO "Netfilter: Device %s is unregistered\n",
 	       "netfilter_file");
 	
-	struct net* mnet;
-	
 	nf_unregister_net_hook(mnet, &net_in_hook_ops);
-	nf_unregister_net_hook(mnet, &net_out_hook_ops);
+	nf_unregister_net_hook(mnet2, &net_out_hook_ops);
 }
 module_init(net_mod_init);
 module_exit(net_mod_cleanup);
