@@ -50,7 +50,7 @@ static unsigned int net_default_filter(void *priv, struct sk_buff *skb,
 	struct list_head* hlist;
 	struct rule_node* node;
 	struct net_rule* hrule;
-	//struct iphdr* hiph;
+	struct iphdr* hiph;
 	
 	uint32_t startIP;
 	uint32_t endIP;
@@ -58,12 +58,12 @@ static unsigned int net_default_filter(void *priv, struct sk_buff *skb,
 	if(!skb || rule_list_head->next == rule_list_head)
 		return NF_ACCEPT;
 
-	iph = (struct iphdr *)skb_network_header(skb);
-	if(iph == NULL)
+	hiph = (struct iphdr *)skb_network_header(skb);
+	if(hiph == NULL)
 		return NF_ACCEPT;
 
-	startIP = iph->saddr;
-	endIP = iph->daddr;
+	startIP = hiph->saddr;
+	endIP = hiph->daddr;
 	
 	hlist = rule_list_head;
 	list_for_each_entry(node, hlist, list){
@@ -120,7 +120,7 @@ static int net_dev_release(struct inode *inode, struct file *file){
 }
 
 // User-space view operation
-static size_t net_dev_read(struct file *file, char *buffer, size_t length, loff_t *offset){
+static ssize_t net_dev_read(struct file *file, char *buffer, size_t length, loff_t *offset){
 	int byte_read = 0;
 	static struct list_head* inlp = &In_list;
 	static struct list_head* outlp = &Out_list;
@@ -201,7 +201,7 @@ static void net_del_rule(struct net_rule *rule){
 		   node->mrule.startIP == rule->startIP &&
 		   node->mrule.startMask == rule->startMask &&
 		   node->mrule.endIP == rule->endIP &&
-		   node->mrule.endMask == rule->endMask {
+		   node->mrule.endMask == rule->endMask) {
 			list_del(lp->next);
 			kfree(node);
 			printk(KERN_INFO "Netfilter: Remove rule "
@@ -215,7 +215,7 @@ static void net_del_rule(struct net_rule *rule){
 	}
 }
 
-static size_t net_dev_write(struct file *file, const char *dev_buffer, size_t length,
+static ssize_t net_dev_write(struct file *file, const char *dev_buffer, size_t length,
 	     loff_t *offset){
 	struct net_ctl *ctlp;
 	int byte_write = 0;
@@ -233,7 +233,7 @@ static size_t net_dev_write(struct file *file, const char *dev_buffer, size_t le
 	}
 
 	ctlp = (struct net_ctl *)buffer;
-	switch(ctlp->mode) {
+	switch(ctlp->mmode) {
 	case ADD:
 		net_add_rule(&ctlp->mrule);
 		break;
@@ -275,7 +275,7 @@ struct file_operations net_dev_fops = {
 };
 
 // Initialize Netfilter module
-static int __init mod_init(void)
+static int __init net_mod_init(void)
 {
 	int ret;
 	Device_open = 0;
@@ -301,13 +301,15 @@ static int __init mod_init(void)
 	       "To communicate to the device, use: mknod %s c %d 0\n",
 	       "netfilter_file", 100);
 
-	nf_register_net_hook(&net_in_hook_ops);
-	nf_register_net_hook(&net_out_hook_ops);
+	struct net* mnet;
+
+	nf_register_net_hook(mnet, &net_in_hook_ops);
+	nf_register_net_hook(mnet, &net_out_hook_ops);
 	return 0;
 }
 
 // Clean up Netfilter module
-static void __exit mod_cleanup(void)
+static void __exit net_mod_cleanup(void)
 {
 	struct rule_node *nodep;
 	struct rule_node *ntmp;
@@ -331,12 +333,14 @@ static void __exit mod_cleanup(void)
 	unregister_chrdev(100, "netfilter_file");
 	printk(KERN_INFO "Netfilter: Device %s is unregistered\n",
 	       "netfilter_file");
-
-	nf_unregister_net_hook(&net_in_hook_ops);
-	nf_unregister_net_hook(&net_out_hook_ops);
+	
+	struct net* mnet;
+	
+	nf_unregister_net_hook(mnet, &net_in_hook_ops);
+	nf_unregister_net_hook(mnet, &net_out_hook_ops);
 }
-module_init(mod_init);
-module_exit(mod_cleanup);
+module_init(net_mod_init);
+module_exit(net_mod_cleanup);
 
 
 
