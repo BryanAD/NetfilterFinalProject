@@ -1,4 +1,3 @@
-#include <asm/uaccess.h>
 #include <linux/ip.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
