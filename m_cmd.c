@@ -89,8 +89,8 @@ static void view_rules(void){
 
 	/* Each rule is printed line-by-line. */
 	printf("I/O  "
-	       "S_Addr           S_Mask           D_Addr           "
-	       "D_Mask\n");
+	       "StartIP          StartMask          EndAddr        "
+	       "EndMask\n");
 	while((byte_count = fread(buffer, 1, sizeof(struct net_rule), fp)) > 0) {
 		rule = (struct net_rule *)buffer;
 		printf("%-3s  ", rule->in_out ? "In" : "Out");
