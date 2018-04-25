@@ -89,7 +89,7 @@ static void view_rules(void){
 
 	/* Each rule is printed line-by-line. */
 	printf("I/O  "
-	       "StartIP          StartMask          EndAddr        "
+	       "StartIP          StartMask        EndAddr        "
 	       "EndMask\n");
 	while((byte_count = fread(buffer, 1, sizeof(struct net_rule), fp)) > 0) {
 		rule = (struct net_rule *)buffer;
