@@ -36,10 +36,10 @@ static void print_usage(void){
 	       "unspecified options are ignored.\n"
 	       "-i --in             input\n"
 	       "-o --out            output\n"
-	       "-s --s_ip IPADDR    source ip address\n"
-	       "-m --s_mask MASK    source mask\n"
-	       "-d --d_ip IPADDR    destination ip address\n"
-	       "-n --d_mask MASK    destination mask\n"
+	       "-s --startIP IPADDR    starting ip address\n"
+	       "-m --startMask MASK    starting mask\n"
+	       "-d --endIP IPADDR    end ip address\n"
+	       "-n --endMask MASK    end mask\n"
 	       "-a --add            add a rule\n"
 	       "-r --remove         remove a rule\n"
 	       "-v --view           view rules\n"
@@ -101,7 +101,7 @@ static void view_rules(void){
 		addr.s_addr = rule->endIP;
 		printf("%-15s  ", inet_ntoa(addr));
 		addr.s_addr = rule->endMask;
-		printf("%-15s  ", inet_ntoa(addr));
+		printf("%-15s  \n", inet_ntoa(addr));
 	}
 	free(buffer);
 	fclose(fp);
@@ -133,10 +133,10 @@ static int parse_arguments(int argc, char **argv, struct net_ctl *ret_ctl){
 	static struct option long_options[] = {
 		{"in", no_argument, 0, 'i'},
 		{"out", no_argument, 0, 'o'},
-		{"s_ip", required_argument, 0, 's'},
-		{"s_mask", required_argument, 0, 'm'},
-		{"d_ip", required_argument, 0, 'd'},
-		{"d_mask", required_argument, 0, 'n'},
+		{"startIP", required_argument, 0, 's'},
+		{"startMask", required_argument, 0, 'm'},
+		{"endIP", required_argument, 0, 'd'},
+		{"endMask", required_argument, 0, 'n'},
 		{"add", no_argument, 0, 'a'},
 		{"remove", no_argument, 0, 'r'},
 		{"view", no_argument, 0, 'v'},
