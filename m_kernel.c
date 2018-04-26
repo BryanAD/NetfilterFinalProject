@@ -69,21 +69,21 @@ static unsigned int net_default_filter(void *priv, struct sk_buff *skb,
 	list_for_each_entry(node, hlist, list){
 		hrule = &node->mrule;
 
-		if(!(hrule->startIP == 0) && !(((startIP ^ hrule->startIP) & hrule->startMask)== 0))
+		if(!(hrule->startIP == 0) || !(((startIP ^ hrule->startIP) & hrule->startMask)== 0))
 			continue;
 
-		if(!(hrule->endIP == 0) && !(((endIP ^ hrule->endIP) & hrule->startMask) == 0))
+		if(!(hrule->endIP == 0) || !(((endIP ^ hrule->endIP) & hrule->startMask) == 0))
 			continue;
-
-		printk(KERN_INFO "Netfilter: Drop packet "
-				"src %d.%d.%d.%d   dst %d.%d.%d.%d\n",
-			       IP_POS(startIP, 3), IP_POS(startIP, 2),
-			       IP_POS(startIP, 1), IP_POS(startIP, 0),
-			       IP_POS(endIP, 3), IP_POS(endIP, 2),
-			       IP_POS(endIP, 1), IP_POS(endIP, 0));
-		return NF_DROP;
+		
+		return NF_ACCEPT;
 	}
-	return NF_ACCEPT;
+	printk(KERN_INFO "Netfilter: Drop packet "
+		       "src %d.%d.%d.%d   dst %d.%d.%d.%d\n",
+		       IP_POS(startIP, 3), IP_POS(startIP, 2),
+		       IP_POS(startIP, 1), IP_POS(startIP, 0),
+		       IP_POS(endIP, 3), IP_POS(endIP, 2),
+		       IP_POS(endIP, 1), IP_POS(endIP, 0));
+	return NF_DROP;
 }
 
 // INbound filter
@@ -106,7 +106,7 @@ static int net_dev_open(struct inode *inode, struct file *file){
 	Device_open++;
 
 	if(!try_module_get(THIS_MODULE)) {
-		printk(KERN_ALERT "MiniFirewall: Module is not available\n");
+		printk(KERN_ALERT Netfilter: Module is not available\n");
 		return -ESRCH;
 	}
 	return 0;
@@ -221,8 +221,7 @@ static ssize_t net_dev_write(struct file *file, const char *dev_buffer, size_t l
 	int byte_write = 0;
 
 	if(length < sizeof(*ctlp)) {
-		printk(KERN_ALERT
-		       "Netfilter: Receives incomplete instruction\n");
+		printk(KERN_ALERT "Netfilter: Receives incomplete instruction\n");
 		return byte_write;
 	}
 
@@ -241,8 +240,7 @@ static ssize_t net_dev_write(struct file *file, const char *dev_buffer, size_t l
 		net_del_rule(&ctlp->mrule);
 		break;
 	default:
-		printk(KERN_ALERT
-		       "Netfilter: Received an unknown command\n");
+		printk(KERN_ALERT "Netfilter: Received an unknown command\n");
 	}
 
 	return byte_write;
@@ -281,8 +279,7 @@ static int __init net_mod_init(void)
 	Device_open = 0;
 	buffer = (char *)kmalloc(sizeof(struct net_ctl *), GFP_KERNEL);
 	if(buffer == NULL) {
-		printk(KERN_ALERT
-		       "Netfilter: Fails to start due to out of memory\n");
+		printk(KERN_ALERT "Netfilter: Fails to start due to out of memory\n");
 		return -1;
 	}
 	INIT_LIST_HEAD(&In_list);
@@ -290,8 +287,7 @@ static int __init net_mod_init(void)
 
 	ret = register_chrdev(100, "netfilter_file", &net_dev_fops);
 	if(ret < 0) {
-		printk(KERN_ALERT
-		       "Netfilter: Fails to start due to device register\n");
+		printk(KERN_ALERT "Netfilter: Fails to start due to device register\n");
 		return ret;
 	}
 	printk(KERN_INFO "Netfilter: "
