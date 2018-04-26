@@ -44,6 +44,7 @@ struct list_head In_list, Out_list;
 static int Device_open;
 static char* buffer;
 struct net* mnet;
+struct net* mnet2;
 
 static unsigned int net_default_filter(void *priv, struct sk_buff *skb,
     const struct nf_hook_state *state, struct list_head* rule_list_head){
@@ -68,22 +69,19 @@ static unsigned int net_default_filter(void *priv, struct sk_buff *skb,
 	hlist = rule_list_head;
 	list_for_each_entry(node, hlist, list){
 		hrule = &node->mrule;
-
-		if(!(hrule->startIP == 0) || !(((startIP ^ hrule->startIP) & hrule->startMask)== 0))
+		if(!(hrule->startIP == 0) && !(((startIP ^ hrule->startIP) & hrule->startMask)== 0))
 			continue;
-
-		if(!(hrule->endIP == 0) || !(((endIP ^ hrule->endIP) & hrule->startMask) == 0))
+		if(!(hrule->endIP == 0) && !(((endIP ^ hrule->endIP) & hrule->startMask) == 0))
 			continue;
-		
-		return NF_ACCEPT;
-	}
-	printk(KERN_INFO "Netfilter: Drop packet "
+		printk(KERN_INFO "Netfilter: Drop packet "
 		       "src %d.%d.%d.%d   dst %d.%d.%d.%d\n",
 		       IP_POS(startIP, 3), IP_POS(startIP, 2),
 		       IP_POS(startIP, 1), IP_POS(startIP, 0),
 		       IP_POS(endIP, 3), IP_POS(endIP, 2),
 		       IP_POS(endIP, 1), IP_POS(endIP, 0));
-	return NF_DROP;
+		return NF_DROP;
+	}
+	return NF_ACCEPT;
 }
 
 // INbound filter
@@ -298,7 +296,7 @@ static int __init net_mod_init(void)
 	       "netfilter_file", 100);
 
 	nf_register_net_hook(mnet, &net_in_hook_ops);
-	nf_register_net_hook(mnet, &net_out_hook_ops);
+	nf_register_net_hook(mnet2, &net_out_hook_ops);
 	return 0;
 }
 
@@ -329,7 +327,7 @@ static void __exit net_mod_cleanup(void)
 	       "netfilter_file");
 	
 	nf_unregister_net_hook(mnet, &net_in_hook_ops);
-	nf_unregister_net_hook(mnet, &net_out_hook_ops);
+	nf_unregister_net_hook(mnet2, &net_out_hook_ops);
 }
 module_init(net_mod_init);
 module_exit(net_mod_cleanup);
