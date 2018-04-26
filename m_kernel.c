@@ -104,7 +104,7 @@ static int net_dev_open(struct inode *inode, struct file *file){
 	Device_open++;
 
 	if(!try_module_get(THIS_MODULE)) {
-		printk(KERN_ALERT Netfilter: Module is not available\n");
+		printk(KERN_ALERT "Netfilter: Module is not available\n");
 		return -ESRCH;
 	}
 	return 0;
